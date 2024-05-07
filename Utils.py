@@ -38,9 +38,3 @@ def getAppIcon():
     pixmap = QPixmap()
     pixmap.loadFromData(byte_array)
     return pixmap
-
-if __name__ == "__main__":
-    line = "[03.05.2024 17:37:37] Payed $15.0 to Titan ┃ RTLploppey"
-    print(parse_line(line))
-    line = "[03.05.2024 17:38:13] Received $45.0 from Titan â”ƒ RTLploppey"
-    print(parse_line(line))
