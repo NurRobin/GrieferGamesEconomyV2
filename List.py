@@ -1,24 +1,21 @@
 from PyQt6.QtCore import QFileSystemWatcher, QThread
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QListWidget, QListWidgetItem, QLabel, QCheckBox, QInputDialog, QMessageBox, QGridLayout, QLineEdit
 
-from datetime import datetime
-
 from FileUtils import FileUtils
+from DataPersistor import DataPersistor
 from Utils import parse_line, ConvertToEuro
-
-class DataLoader(QThread):
-    def __init__(self, list_instance):
-        super().__init__()
-        self.list_instance = list_instance
-
-    def run(self):
-        self.list_instance.load_data()
 
 class List(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
         self.isPaused = False
-        self.data_loader = DataLoader(self)
+        self.data_persistor = DataPersistor(FileUtils().getFilePath())
+        self.data_loader = QThread()
+        self.data_persistor.load_data_thread.moveToThread(self.data_loader)
+        self.data_persistor.load_data_thread.start()
+        self.data_persistor.load_data_thread.dataLoaded.connect(self.add_items_to_list)
+        self.data_loader.started.connect(self.data_persistor.load_data_thread.run)
+        self.data_loader.finished.connect(self.data_loader.deleteLater)
         layout = QVBoxLayout()
         self.listWidget = QListWidget()
         layout.addWidget(self.listWidget)
@@ -33,20 +30,19 @@ class List(QWidget):
         self.load_data()
 
     def load_data(self):
-        with open(self.file_utils.getFilePath(), 'r') as file:
-            lines = file.readlines()  # Read all lines into a list
-        for line in reversed(lines):  # Reverse the list and iterate over it
-            self.add_item_to_list(line)
+        self.data_persistor.trigger_reload()
 
     def refresh(self, trigger="Auto Reload"):
         if self.isPaused and trigger == "Auto Reload":
             return
         self.listWidget.clear()  # Clear the listWidget
         self.data_loader.start()  # Start the data loader thread
+    
+    def add_items_to_list(self, data):
+        for item in data:
+            self.add_item_to_list(item)
 
-    def add_item_to_list(self, line):
-        print("\nTrying to add line: " + line + "\n")
-        data = parse_line(line)
+    def add_item_to_list(self, data):
         print(data)
         item = QListWidgetItem()
         widget = QWidget()
